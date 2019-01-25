@@ -1,3 +1,4 @@
+
 /*----------------------------------------------------------------------------*/
 /* Copyright (c) 2018 FIRST. All Rights Reserved.                             */
 /* Open Source Software - may be modified and shared by FRC teams. The code   */
@@ -18,13 +19,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import org.opencv.core.Rect;
+import org.opencv.imgproc.Imgproc;
+
 import edu.wpi.cscore.VideoSource;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.vision.VisionPipeline;
 import edu.wpi.first.vision.VisionThread;
-
-import org.opencv.core.Mat;
 
 /*
    JSON format:
@@ -54,10 +55,25 @@ import org.opencv.core.Mat;
  */
 
 public final class Main {
+  /**
+   *
+   */
+
+  private static final String PMD_CYCLOMATIC_COMPLEXITY = "PMD.CyclomaticComplexity";
+  /**
+   *
+   */
+
+  private static final String PMD_CYCLOMATIC_COMPLEXITY2 = PMD_CYCLOMATIC_COMPLEXITY;
   private static String configFile = "/boot/frc.json";
 
-  @SuppressWarnings("MemberName")
+  @SuppressWarnings(CameraConfig.MEMBER_NAME)
   public static class CameraConfig {
+    /**
+     *
+     */
+
+    static final String MEMBER_NAME = "MemberName";
     public String name;
     public String path;
     public JsonObject config;
@@ -108,7 +124,7 @@ public final class Main {
   /**
    * Read configuration file.
    */
-  @SuppressWarnings("PMD.CyclomaticComplexity")
+  @SuppressWarnings(PMD_CYCLOMATIC_COMPLEXITY2)
   public static boolean readConfig() {
     // parse file
     JsonElement top;
@@ -167,26 +183,13 @@ public final class Main {
    */
   public static VideoSource startCamera(CameraConfig config) {
     System.out.println("Starting camera '" + config.name + "' on " + config.path);
-    VideoSource camera = CameraServer.getInstance().startAutomaticCapture(
-        config.name, config.path);
+    VideoSource camera = CameraServer.getInstance().startAutomaticCapture(config.name, config.path);
 
     Gson gson = new GsonBuilder().create();
 
     camera.setConfigJson(gson.toJson(config.config));
 
     return camera;
-  }
-
-  /**
-   * Example pipeline.
-   */
-  public static class MyPipeline implements VisionPipeline {
-    public int val;
-
-    @Override
-    public void process(Mat mat) {
-      val += 1;
-    }
   }
 
   /**
@@ -220,16 +223,17 @@ public final class Main {
 
     // start image processing on camera 0 if present
     if (cameras.size() >= 1) {
-      VisionThread visionThread = new VisionThread(cameras.get(0),
-              new MyPipeline(), pipeline -> {
-        // do something with pipeline results
+      var imgLock = "";
+      VisionThread visionThread = new VisionThread(cameras.get(0), new GripPipeline(), pipeline -> {
+        if (!pipeline.filterContoursOutput().isEmpty()) {
+          var centerX = 0;
+          Rect r = Imgproc.boundingRect(pipeline.filterContoursOutput().get(0));
+          synchronized (imgLock) {
+            centerX = r.x + (r.width / 2);
+            System.out.println("centerx " + centerX);
+          }
+        }
       });
-      /* something like this for GRIP:
-      VisionThread visionThread = new VisionThread(cameras.get(0),
-              new GripPipeline(), pipeline -> {
-        ...
-      });
-       */
       visionThread.start();
     }
 
